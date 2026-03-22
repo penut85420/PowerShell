@@ -4733,6 +4733,10 @@ namespace System.Management.Automation
                         ? providerPrefix + basePath
                         : providerPrefix + basePath + provider.ItemSeparator;
                     basePath = RebuildPathWithVars(basePath, homePath, stringType, literalPaths, out baseQuotesNeeded);
+                    if (homePath is not null)
+                    {
+                        basePath = basePath.Replace(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                    }
                 }
                 else
                 {
@@ -4763,11 +4767,8 @@ namespace System.Management.Automation
                             relativeBasePath);
                         basePath = basePath.Remove(basePath.Length - entry.Name.Length);
                         basePath = RebuildPathWithVars(basePath, homePath, stringType, literalPaths, out baseQuotesNeeded);
+                        basePath = basePath.Replace(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
                     }
-
-                    var resultType = isContainer
-                        ? CompletionResultType.ProviderContainer
-                        : CompletionResultType.ProviderItem;
 
                     bool leafQuotesNeeded;
                     var completionText = NewPathCompletionText(
@@ -4777,6 +4778,29 @@ namespace System.Management.Automation
                         containsNestedExpressions: false,
                         forceQuotes: baseQuotesNeeded || leafQuotesNeeded,
                         addAmpersand: false);
+
+                    CompletionResultType resultType;
+                    if (isContainer)
+                    {
+                        // For relative paths and ~ paths, PSReadLine only checks for '\' when deciding to append a separator.
+                        // Use ProviderItem so PSReadLine won't append '\', and include '/' ourselves.
+                        if (relativePaths || homePath is not null)
+                        {
+                            resultType = CompletionResultType.ProviderItem;
+                            completionText = completionText.Length > 0 && completionText[^1] is '\'' or '"'
+                                ? completionText[..^1] + "/" + completionText[^1]
+                                : completionText + "/";
+                        }
+                        else
+                        {
+                            resultType = CompletionResultType.ProviderContainer;
+                        }
+                    }
+                    else
+                    {
+                        resultType = CompletionResultType.ProviderItem;
+                    }
+
                     results.Add(new CompletionResult(completionText, entryName, resultType, entry.FullName));
                 }
             }
@@ -4986,15 +5010,12 @@ namespace System.Management.Automation
 
             for (int i = 0; i < path.Length; i++)
             {
-                // on Windows, we need to preserve the expanded home path as native commands don't understand it
-#if UNIX
                 if (i == homeIndex)
                 {
                     _ = sb.Append('~');
                     i += homePath.Length - 1;
                     continue;
                 }
-#endif
 
                 EscapeCharIfNeeded(sb, path, i, stringType, literalPath, useSingleQuoteEscapeRules, ref quotesAreNeeded);
                 _ = sb.Append(path[i]);
