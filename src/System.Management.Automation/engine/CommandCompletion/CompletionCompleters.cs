@@ -4761,11 +4761,6 @@ namespace System.Management.Automation
                         basePath = context.ExecutionContext.EngineSessionState.NormalizeRelativePath(
                             entry.FullName,
                             relativeBasePath);
-                        if (!basePath.StartsWith($"..{provider.ItemSeparator}", StringComparison.Ordinal))
-                        {
-                            basePath = $".{provider.ItemSeparator}{basePath}";
-                        }
-
                         basePath = basePath.Remove(basePath.Length - entry.Name.Length);
                         basePath = RebuildPathWithVars(basePath, homePath, stringType, literalPaths, out baseQuotesNeeded);
                     }
@@ -4897,11 +4892,6 @@ namespace System.Management.Automation
                 {
                     basePath = context.ExecutionContext.EngineSessionState.NormalizeRelativePath(
                         basePath + childNameList[0], context.ExecutionContext.SessionState.Internal.CurrentLocation.ProviderPath);
-                    if (!basePath.StartsWith($"..{provider.ItemSeparator}", StringComparison.Ordinal))
-                    {
-                        basePath = $".{provider.ItemSeparator}{basePath}";
-                    }
-
                     basePath = basePath.Remove(basePath.Length - childNameList[0].Length);
                 }
 
